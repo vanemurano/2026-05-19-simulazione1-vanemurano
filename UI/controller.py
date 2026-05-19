@@ -9,7 +9,8 @@ class Controller:
         self._model = model
 
     def fillDDGenre(self):
-        pass
+        listaGeneri=self._model.getAllGenres()
+
 
     def handleCreaGrafo(self, e):
         pass
