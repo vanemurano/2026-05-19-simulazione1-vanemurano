@@ -11,3 +11,6 @@ class Connessione:
 
     def __hash__(self):
         return hash(self.artista1), hash(self.artista2)
+
+    def __str__(self):
+        return f"{self.artista1.Name} -> {self.artista2.Name}: {self.peso}"
