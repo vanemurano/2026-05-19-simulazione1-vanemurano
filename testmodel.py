@@ -1,12 +1,8 @@
 from database.DAO import DAO
+from model.artist import Artist
+from model.genre import Genre
 from model.model import Model
 
 modello=Model()
-print(DAO.getArtistWPopularity(150, 1)) #funziona
-grafo=modello._graph
-modello.buildGraph(1)
-print(f"Numero nodi: {modello.getNNodi()}")
-print(f"Numero archi: {modello.getNArchi()}")
-dizPop=modello._dizPopolarita
-for a in dizPop.keys:
-    print(f"{a}: {dizPop[a]}")
+modello.buildGraph(Genre(1, "Rock"), 20)
+modello.getBestPath(Artist(90, "Iron Maiden", 140), 4)

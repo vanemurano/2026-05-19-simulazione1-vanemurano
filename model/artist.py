@@ -5,6 +5,7 @@ from dataclasses import dataclass
 class Artist:
     ArtistId: int
     Name: str
+    nTracce: int # aggiunto per fare il programma
 
     def __hash__(self):
         return hash(self.ArtistId)

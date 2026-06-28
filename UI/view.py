@@ -26,21 +26,32 @@ class View(ft.UserControl):
 
 
         self._ddGenre = ft.Dropdown(label="Genere", width=250)
-
         self._controller.fillDDGenre()
+        self._txtInMinV=ft.TextField(label="Minimo vendite", width=250)
+
         self._btnCreaGrafo = ft.ElevatedButton(text="Crea Grafo",
                                                on_click=self._controller.handleCreaGrafo, width=250)
 
-        row1 = ft.Row([self._ddGenre, self._btnCreaGrafo],
+        row1 = ft.Row([self._ddGenre, self._txtInMinV, self._btnCreaGrafo],
                       alignment=ft.MainAxisAlignment.CENTER)
         self._page.controls.append(row1)
 
         self._ddArtist = ft.Dropdown(label="Artist", width=250)
         self._btnTrovaCammino = ft.ElevatedButton(text="Trova Cammino", on_click=self._controller.handleCammino, width=250)
+        self._txtInM=ft.TextField(label="Max lunghezza cammino (M)", width=250)
 
-        row2 = ft.Row([self._ddArtist, self._btnTrovaCammino],
-                      alignment=ft.MainAxisAlignment.CENTER)
+        self._btnAnalizza=ft.ElevatedButton(text="Analizza grafo",
+                                            on_click=self._controller.handleAnalizza,
+                                            width=250)
+
+        row2=ft.Row([self._btnAnalizza],
+                   alignment=ft.MainAxisAlignment.CENTER)
         self._page.controls.append(row2)
+
+        row3 = ft.Row([self._ddArtist, self._txtInM, self._btnTrovaCammino],
+                      alignment=ft.MainAxisAlignment.CENTER)
+
+        self._page.controls.append(row3)
 
         # List View where the reply is printed
         self.txt_result = ft.ListView(expand=1, spacing=10, padding=20, auto_scroll=True)

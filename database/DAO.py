@@ -14,7 +14,8 @@ class DAO():
         cursor=connection.cursor(dictionary=True)
 
         query="""select *
-                from genre"""
+                from genre
+                order by Name"""
 
         res=[]
 
@@ -29,38 +30,21 @@ class DAO():
         return res #ritorna una lista di generi
 
     @staticmethod
-    def getArtistForGenre(genreId: int, idMapA: dict):
+    def getAllArtists():
         connection = DBConnect.get_connection()
         cursor = connection.cursor(dictionary=True)
 
-        query = """select distinct (ar.ArtistId) as id 
-                    from artist ar, album al, track t
-                    where ar.ArtistId=al.ArtistId and al.AlbumId=t.AlbumId 
-                    and t.GenreId=%s"""
+        query = """select distinct ar.ArtistId, ar.Name, sum(Quantity) as nTracce
+                    from album a, track t, invoiceline il, artist ar
+                    where a.AlbumId=t.AlbumId 
+                    and il.TrackId=t.TrackId
+                    and ar.ArtistId=a.ArtistId
+                    group by ArtistId, Name
+                    order by Name"""
 
         res = []
 
-        cursor.execute(query, (genreId,))
-
-        for row in cursor:
-            res.append(idMapA[row["id"]]) #l'artista corrispondente all'id selezionato
-
-        cursor.close()
-        connection.close()
-
-        return res  # ritorna una lista di artisti che hanno almeno un brano del genere specificato
-
-    @staticmethod
-    def getAllArtist(): #metodo che serve solo per il dizionario
-        connection = DBConnect.get_connection()
-        cursor = connection.cursor(dictionary=True)
-
-        query = """select distinct (a.ArtistId), a.Name
-                from artist a"""
-
-        res = []
-
-        cursor.execute(query,)
+        cursor.execute(query, )
 
         for row in cursor:
             res.append(Artist(**row))
@@ -68,70 +52,88 @@ class DAO():
         cursor.close()
         connection.close()
 
-        return res  # ritorna una lista di artisti
+        return res  # ritorna una lista di generi
 
     @staticmethod
-    def getArtistWPopularity(idArtist, idGenre):
-        connection = DBConnect.get_connection()
-        cursor = connection.cursor(dictionary=True)
+    def getAllNodes(genreid: int, minV: int):
+        connection=DBConnect.get_connection()
+        cursor=connection.cursor(dictionary=True)
 
-        query = """select ar.ArtistId, count(i.TrackId) as popularity
-                    from artist ar 
-                    join album al on ar.ArtistId=al.ArtistId 
-                    join track t on al.AlbumId=t.AlbumId 
-                    left join invoiceline i on t.TrackId=i.TrackId
-                    where t.GenreId=%s and ar.ArtistId=%s
-                    group by ArtistId
-                    order by popularity desc"""
-        #faccio IL LEFT JOIN e non l'uguaglianza
-        #così considera anche gli oggetti che non compaiono in entrambe le tabelle
-        #(cioè che non hanno venduto)
-
-        cursor.execute(query, (idGenre, idArtist,))
+        query="""select distinct tab.ArtistId, tab.Name, sum(Quantity) as nTracce
+                    from album a, track t, invoiceline il, (select distinct ar.ArtistId, ar.Name
+                                            from album a, track t, artist ar
+                                            where a.AlbumId=t.AlbumId 
+                                            and t.GenreId=%s
+                                            and ar.ArtistId=a.ArtistId) as tab	
+                    where a.AlbumId=t.AlbumId 
+                    and il.TrackId=t.TrackId
+                    and tab.ArtistId=a.ArtistId
+                    group by ArtistId, Name
+                    having nTracce>=%s
+                    order by ArtistId"""
 
         res=[]
-        pop=0
+
+        cursor.execute(query, (genreid, minV,))
 
         for row in cursor:
-            res.append((row["ArtistId"], row["popularity"]))
-            pop=row["popularity"]
+            res.append(Artist(**row))
 
         cursor.close()
         connection.close()
 
-        return pop
-        # ritorna la popolarità dell'artista di cui abbiamo passato l'id
+        return res # lista di nodi Artista
 
-    def getConnessioniArtisti(idMapA: dict, genreId: int):
+    @staticmethod
+    def getAllEdges(idMapA: dict): # NON sono solo per il genere!!!
         connection = DBConnect.get_connection()
         cursor = connection.cursor(dictionary=True)
 
-        query = """select t1.ArtistId as a1, t2.ArtistId as a2, count(*) as nConnessioni
-                    from (select ar.ArtistId, i.CustomerId
-                            from artist ar, album al, track t, invoiceline il, invoice i 
-                            where ar.ArtistId=al.ArtistId and al.AlbumId=t.AlbumId 
-                            and t.TrackId=il.TrackId and il.InvoiceId=i.InvoiceId and t.GenreId=%s
-                            ) as t1,
-                        (select ar.ArtistId, i.CustomerId
-                            from artist ar, album al, track t, invoiceline il, invoice i 
-                            where ar.ArtistId=al.ArtistId and al.AlbumId=t.AlbumId 
-                            and t.TrackId=il.TrackId and il.InvoiceId=i.InvoiceId and t.GenreId=%s
-                            ) as t2
-                    where t1.CustomerId=t2.CustomerId and t1.ArtistId<t2.ArtistId
-                    group by t1.ArtistId, t2.ArtistId
-                    order by t1.ArtistId"""
+        query = """with tabClienti as (select distinct a.ArtistId, i.CustomerId
+                    from album a, track t, invoice i, invoiceline il
+                    where a.AlbumId=t.AlbumId 
+                    and il.TrackId=t.TrackId
+                    and il.InvoiceId=i.InvoiceId
+                    order by ArtistId)
+                    select distinct t1.ArtistId as id1, t2.ArtistId as id2, count(t1.CustomerId) as numClienti
+                    from tabClienti t1, tabClienti t2
+                    where t1.CustomerId=t2.CustomerId
+                    and t1.ArtistId<t2.ArtistId
+                    group by id1, id2"""
 
         res = []
 
-        cursor.execute(query, (genreId, genreId))
+        cursor.execute(query,)
 
         for row in cursor:
-            res.append(Connessione(idMapA[row["a1"]],
-                                   idMapA[row["a2"]],
-                                   0)) #per ora le connessioni hanno peso 0
+            res.append((idMapA[row["id1"]], idMapA[row["id2"]], int(row["numClienti"])))
 
         cursor.close()
         connection.close()
 
-        return res  # ritorna una lista di connessioni tra artisti
+        return res  # lista di tuple Artista1, Artista2
 
+    @staticmethod
+    def getRicavo(artist_id):
+        connection = DBConnect.get_connection()
+        cursor = connection.cursor(dictionary=True)
+
+        query = """select sum(il.UnitPrice*il.Quantity) as ricavo
+                    from album a, track t, invoiceline il
+                    where a.ArtistId=%s
+                    and a.AlbumId=t.AlbumId 
+                    and il.TrackId=t.TrackId
+                    group by ArtistId"""
+
+
+        cursor.execute(query, (artist_id,))
+
+        res=None
+
+        for row in cursor:
+            res=float(row["ricavo"]) # genera solo un numero come output
+
+        cursor.close()
+        connection.close()
+
+        return res
